@@ -14,4 +14,5 @@ Description goes here.
 
 == Copyright
 
-Copyright (c) 2011 Mark J. Titorenko. See LICENSE for details.
+Copyright (C) 2007-2011 Stephen F Norledge & Alces Software Ltd.
+See LICENSE.txt for details.
