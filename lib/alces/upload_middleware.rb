@@ -31,6 +31,11 @@ module Alces
       @explicit = opts[:explicit]
       @tmpdir = opts[:tmpdir] || Dir::tmpdir
       @paths = [@paths] if @paths.kind_of?(String)
+      opts[:targets].call(self) if opts[:targets]
+    end
+
+    def targets
+      @targets ||= {}
     end
 
     def call(env)
@@ -118,7 +123,7 @@ module Alces
     def convert_and_pass_on(env)
       # work out where to deposit the file
       dest = env['HTTP_X_DESTINATION'] || ''
-      fn = ::File.join(@tmpdir,dest,env['HTTP_X_FILE_NAME'])
+      fn = ::File.join(@tmpdir,targets[dest].directory,env['HTTP_X_FILE_NAME'])
       tempfile = ::File.open(fn,'wb')
       # tempfile = Tempfile.new('raw-upload.', @tmpdir)
       # if (RUBY_VERSION.split('.').map{|e| e.to_i} <=> [1, 9]) > 0

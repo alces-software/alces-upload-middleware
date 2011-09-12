@@ -18,5 +18,6 @@
 #
 # Some rights reserved, see LICENSE.txt.
 #==============================================================================
-require "alces-upload-middleware/version"
+require 'alces-upload-middleware/version'
 require 'alces/upload_middleware'
+require 'alces/upload_middleware/target'
