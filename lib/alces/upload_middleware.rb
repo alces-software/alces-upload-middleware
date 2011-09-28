@@ -19,6 +19,8 @@
 # Some rights reserved, see LICENSE.txt.
 #==============================================================================
 require 'tmpdir' # Needed in 1.8.7 to access Dir::tmpdir
+# XXX - hack!
+require 'volume_setup_data'
 
 module Alces
   class UploadMiddleware < Struct.new(:app, :frequency,
@@ -31,11 +33,13 @@ module Alces
       @explicit = opts[:explicit]
       @tmpdir = opts[:tmpdir] || Dir::tmpdir
       @paths = [@paths] if @paths.kind_of?(String)
-      opts[:targets].call(self) if opts[:targets]
+      opts[:roots].call(self) if opts[:roots]
     end
 
-    def targets
-      @targets ||= {}
+    def roots(uid)
+#      @roots ||= {}
+      # XXX - haxxx!
+      VolumeSetupData.roots(uid)
     end
 
     def call(env)
@@ -120,26 +124,35 @@ module Alces
 
     private
 
+    def directory_for(target,uid)
+      volume, directory = target.split(':')
+      STDERR.puts "volume: #{volume}, directory: #{directory}, roots[volume]: #{roots(uid)[volume]}"
+      ::File.join(roots(uid)[volume],directory)
+    end
+
     def convert_and_pass_on(env)
       # work out where to deposit the file
-      dest = env['HTTP_X_DESTINATION'] || ''
-      fn = ::File.join(@tmpdir,targets[dest].directory,env['HTTP_X_FILE_NAME'])
-      tempfile = ::File.open(fn,'wb')
-      # tempfile = Tempfile.new('raw-upload.', @tmpdir)
-      # if (RUBY_VERSION.split('.').map{|e| e.to_i} <=> [1, 9]) > 0
-      #   # 1.9: if the GC runs, it may unlink the tempfile.
-      #   # To avoid this, I create another version of it
-      #   # (a hard link to the same file). If the original
-      #   # is unlinked, we'll still have this other link.
-      #   tempfile2 = relink_file(tempfile)
-      #   tempfile.close
-      #   tempfile = tempfile2
-      # end
-      loop do
-        tempfile << ( data = env['rack.input'].read(1048576) )
-        break if data.nil?
+      uid = env['HTTP_X_USER_UID'].to_i
+      target_directory = directory_for(env['HTTP_X_DESTINATION'] || '', uid)
+      fn = ::File.join(target_directory,env['HTTP_X_FILE_NAME'])
+      Process.switch_fsuid(uid) do
+        tempfile = ::File.open(fn,'wb')
+        # tempfile = Tempfile.new('raw-upload.', @tmpdir)
+        # if (RUBY_VERSION.split('.').map{|e| e.to_i} <=> [1, 9]) > 0
+        #   # 1.9: if the GC runs, it may unlink the tempfile.
+        #   # To avoid this, I create another version of it
+        #   # (a hard link to the same file). If the original
+        #   # is unlinked, we'll still have this other link.
+        #   tempfile2 = relink_file(tempfile)
+        #   tempfile.close
+        #   tempfile = tempfile2
+        # end
+        loop do
+          tempfile << ( data = env['rack.input'].read(1048576) )
+          break if data.nil?
+        end
+        tempfile.close
       end
-      tempfile.close
       fake_file = {
         :filename => env['HTTP_X_FILE_NAME'],
         :type => env['CONTENT_TYPE'],
