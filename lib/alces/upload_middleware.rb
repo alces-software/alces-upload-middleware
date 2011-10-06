@@ -20,7 +20,7 @@
 #==============================================================================
 require 'tmpdir' # Needed in 1.8.7 to access Dir::tmpdir
 # XXX - hack!
-require 'volume_setup_data'
+#require 'volume_setup_data'
 
 module Alces
   class UploadMiddleware < Struct.new(:app, :frequency,
