@@ -19,4 +19,5 @@
 # Some rights reserved, see LICENSE.txt.
 #==============================================================================
 source "http://rubygems.org"
+
 gemspec
