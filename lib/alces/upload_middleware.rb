@@ -19,8 +19,6 @@
 # Some rights reserved, see LICENSE.txt.
 #==============================================================================
 require 'tmpdir' # Needed in 1.8.7 to access Dir::tmpdir
-# XXX - hack!
-#require 'volume_setup_data'
 
 module Alces
   class UploadMiddleware < Struct.new(:app, :frequency,
@@ -33,13 +31,7 @@ module Alces
       @explicit = opts[:explicit]
       @tmpdir = opts[:tmpdir] || Dir::tmpdir
       @paths = [@paths] if @paths.kind_of?(String)
-      opts[:roots].call(self) if opts[:roots]
-    end
-
-    def roots(uid)
-#      @roots ||= {}
-      # XXX - haxxx!
-      VolumeSetupData.roots(uid)
+      @targets_class = opts[:targets_class]
     end
 
     def call(env)
@@ -124,39 +116,47 @@ module Alces
 
     private
 
-    def directory_for(target,uid)
-      volume, directory = target.split(':')
-      STDERR.puts "volume: #{volume}, directory: #{directory}, roots[volume]: #{roots(uid)[volume]}"
-      ::File.join(roots(uid)[volume],directory)
+    def assert_valid_uid_auth!(env, targets)
+      uid_auth = env['HTTP_X_USER_UID_AUTH']
+      session_id = (session = env['rack.session']) && session['session_id']
+      targets.assert_valid_uid_auth!(uid_auth, session_id)
+    end
+
+    def file_for(env, targets)
+      name, directory = env['HTTP_X_DESTINATION'].split(':')
+      filename = env['HTTP_X_FILE_NAME']
+      path = File.join(directory, filename)
+      targets.get(name).file_for(path)
+    end
+
+    def write_file(env,file)
+      output = file.open 
+      sum = Digest::MD5.new
+      begin
+        loop do
+          data = env['rack.input'].read(1048576)
+          break if data.nil?
+          output.write(data)
+          sum.update(data)
+        end
+        STDERR.puts "CHECKSUM was: #{sum.hexdigest}"
+      ensure
+        output.close rescue nil
+      end
     end
 
     def convert_and_pass_on(env)
-      # work out where to deposit the file
-      uid = env['HTTP_X_USER_UID'].to_i
-      target_directory = directory_for(env['HTTP_X_DESTINATION'] || '', uid)
-      fn = ::File.join(target_directory,env['HTTP_X_FILE_NAME'])
-      Process.switch_fsuid(uid) do
-        tempfile = ::File.open(fn,'wb')
-        # tempfile = Tempfile.new('raw-upload.', @tmpdir)
-        # if (RUBY_VERSION.split('.').map{|e| e.to_i} <=> [1, 9]) > 0
-        #   # 1.9: if the GC runs, it may unlink the tempfile.
-        #   # To avoid this, I create another version of it
-        #   # (a hard link to the same file). If the original
-        #   # is unlinked, we'll still have this other link.
-        #   tempfile2 = relink_file(tempfile)
-        #   tempfile.close
-        #   tempfile = tempfile2
-        # end
-        loop do
-          tempfile << ( data = env['rack.input'].read(1048576) )
-          break if data.nil?
-        end
-        tempfile.close
-      end
+      uid = env['HTTP_X_USER_UID']
+      targets = @targets_class.new(uid)
+
+      assert_valid_uid_auth!(env, targets)
+      file = file_for(env, targets)
+      write_file(env, file)
+
       fake_file = {
         :filename => env['HTTP_X_FILE_NAME'],
         :type => env['CONTENT_TYPE'],
-        :tempfile => File.new(fn),
+        :tempfile => file,
       }
       env['rack.request.form_input'] = env['rack.input']
       env['rack.request.form_hash'] ||= {}
@@ -201,21 +201,6 @@ module Alces
       else
         true
       end
-    end
-
-    def relink_file(file)
-      new_name = file.path + random_string
-      ::File.link(file.path, new_name)
-      ret = ::File.open(new_name, "r+")
-      ret.binmode
-      ret
-    rescue SystemCallError
-      # The randomly chosen file name was taken. Try again.
-      retry
-    end
-
-    def random_string
-      (0...8).map{65.+(rand(25)).chr}.join
     end
   end
 end

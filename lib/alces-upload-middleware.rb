@@ -20,4 +20,3 @@
 #==============================================================================
 require 'alces-upload-middleware/version'
 require 'alces/upload_middleware'
-require 'alces/upload_middleware/target'
