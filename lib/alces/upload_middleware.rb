@@ -170,6 +170,12 @@ module Alces
         env['rack.request.query_hash'].merge!(params)
       end
       app.call(env)
+    rescue
+      STDERR.puts '==== UPLOAD MIDDLEWARE ===='
+      STDERR.puts $!.message 
+      STDERR.puts $!.backtrace.join("\n")
+      STDERR.puts '==========================='
+      raise
     end
 
     def kick_in?(env)
