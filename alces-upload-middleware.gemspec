@@ -33,7 +33,7 @@ Gem::Specification.new do |s|
   s.description = %Q{Rack middleware that streams plain file uploads to configurable destinations before converting into normal form input to allow Rack applications to read them using standard file upload semantics.}
   s.extra_rdoc_files = [
     'LICENSE.txt',
-    'README.md',
+    'README.rdoc',
   ]
 
   s.required_rubygems_version = Gem::Requirement.new('>= 1.3.7')

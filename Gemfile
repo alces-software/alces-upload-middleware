@@ -19,5 +19,6 @@
 # Some rights reserved, see LICENSE.txt.
 #==============================================================================
 source "http://rubygems.org"
+source "http://gems.alces-software.com"
 
 gemspec
