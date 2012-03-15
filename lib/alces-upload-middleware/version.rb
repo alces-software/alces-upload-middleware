@@ -19,5 +19,5 @@
 # Some rights reserved, see LICENSE.txt.
 #==============================================================================
 module AlcesUploadMiddleware
-  VERSION = "0.0.1"
+  VERSION = "0.1.0"
 end

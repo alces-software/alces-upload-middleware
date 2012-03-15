@@ -25,14 +25,14 @@ Gem::Specification.new do |s|
   s.name = 'alces-upload-middleware'
   s.version = AlcesUploadMiddleware::VERSION
   s.platform = Gem::Platform::RUBY
-  s.date = '2011-09-08'
+  s.date = "2012-03-15"
   s.authors = ['Mark J. Titorenko']
   s.email = 'mark.titorenko@alces-software.com'
   s.homepage = 'http://github.com/alces-software/alces-upload-middleware'
   s.summary = %Q{Alces Software upload middleware for Rack}
   s.description = %Q{Rack middleware that streams plain file uploads to configurable destinations before converting into normal form input to allow Rack applications to read them using standard file upload semantics.}
   s.extra_rdoc_files = [
-    'LICENSE',
+    'LICENSE.txt',
     'README.md',
   ]
 
@@ -46,10 +46,11 @@ Gem::Specification.new do |s|
   s.require_paths = ['lib']
 
   s.add_runtime_dependency 'json'
+  s.add_development_dependency 'geminabox'
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'bundler'
-  s.add_development_dependency 'bueller'
+  s.add_development_dependency 'bueller', '>= 0.1.0'
   s.add_development_dependency 'rake'
-  s.add_development_dependency 'rcov'
+  s.add_development_dependency 'simplecov'
 end
 
