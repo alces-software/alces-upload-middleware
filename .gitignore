@@ -3,6 +3,7 @@
 Gemfile.lock
 pkg/*
 vendor/ruby
+vendor/bin
 # rcov generated
 coverage
 
