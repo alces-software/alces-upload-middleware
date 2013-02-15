@@ -1,5 +1,5 @@
 #==============================================================================
-# Copyright (C) 2007-2011 Stephen F Norledge & Alces Software Ltd.
+# Copyright (C) 2007-2013 Stephen F Norledge & Alces Software Ltd.
 #
 # This file is part of Alces Upload Middleware, part of the Symphony suite.
 #
@@ -24,6 +24,12 @@ module Alces
   class UploadMiddleware < Struct.new(:app, :frequency,
                                       :input, :pos, :seen, :content_length,
                                       :mtime)
+    NULL_LOGGER = Object.new.tap do |o|
+      class << o
+        def method_missing(s,*a,&b); end
+      end
+    end
+
     def initialize(app, opts = {})
       super(app,
             opts[:frequency] || 1)
@@ -32,6 +38,8 @@ module Alces
       @tmpdir = opts[:tmpdir] || Dir::tmpdir
       @paths = [@paths] if @paths.kind_of?(String)
       @targets_class = opts[:targets_class]
+      @logger = opts[:logger] || NULL_LOGGER
+      @origins = opts[:origins] || '*'
     end
 
     def call(env)
@@ -41,11 +49,17 @@ module Alces
 
         length = env["CONTENT_LENGTH"] and length = length.to_i
         chunked = env["TRANSFER_ENCODING"] =~ %r{\Achunked\z}i and length = nil
+
         if chunked || (length && length > 0)
           return dup._call(env, length)
         end
       end
-      app.call(env)
+      app.call(env).tap do |a|
+        status, headers, response = a
+        if kick_in?(env)
+          headers.merge!({'Access-Control-Allow-Origin' => @origins})
+        end
+      end
     end
 
     def _call(env, length)
@@ -94,7 +108,7 @@ module Alces
     def read(*args)
       rv = input.read(*args)
       rv.nil? || rv.size == 0 ? _finish : _incr(rv.size)
-      STDERR.puts "READ #{pos} bytes (#{rv && rv.size} bytes this time)"
+      @logger.info "READ #{pos} bytes (#{rv && rv.size} bytes this time)"
       rv
     end
 
@@ -116,17 +130,11 @@ module Alces
 
     private
 
-    def assert_valid_uid_auth!(env, targets)
-      uid_auth = env['HTTP_X_USER_UID_AUTH']
-      session_id = (session = env['rack.session']) && session['session_id']
-      targets.assert_valid_uid_auth!(uid_auth, session_id)
-    end
-
-    def file_for(env, targets)
+    def file_for(env)
       name, directory = env['HTTP_X_DESTINATION'].split(':')
       filename = env['HTTP_X_FILE_NAME']
       path = File.join(directory, filename)
-      targets.get(name).file_for(path)
+      targets(env).get(name).file_for(path)
     end
 
     def write_file(env,file)
@@ -139,18 +147,20 @@ module Alces
           output.write(data)
           sum.update(data)
         end
-        STDERR.puts "CHECKSUM was: #{sum.hexdigest}"
+        @logger.info "CHECKSUM was: #{sum.hexdigest}"
       ensure
         output.close rescue nil
       end
     end
 
-    def convert_and_pass_on(env)
-      uid = env['HTTP_X_USER_UID']
-      targets = @targets_class.new(uid)
+    def targets(env)
+      @targets_class.new(env['HTTP_X_FINDER_KEY']).tap do |targets|
+        raise "Invalid user identification provided" unless targets.valid?
+      end
+    end
 
-      assert_valid_uid_auth!(env, targets)
-      file = file_for(env, targets)
+    def convert_and_pass_on(env)
+      file = file_for(env)
       write_file(env, file)
 
       fake_file = {

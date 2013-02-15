@@ -25,7 +25,7 @@ Gem::Specification.new do |s|
   s.name = 'alces-upload-middleware'
   s.version = AlcesUploadMiddleware::VERSION
   s.platform = Gem::Platform::RUBY
-  s.date = "2012-03-15"
+  s.date = "2013-02-15"
   s.authors = ['Mark J. Titorenko']
   s.email = 'mark.titorenko@alces-software.com'
   s.homepage = 'http://github.com/alces-software/alces-upload-middleware'
@@ -48,8 +48,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'json'
   s.add_development_dependency 'geminabox'
   s.add_development_dependency 'rspec'
-  s.add_development_dependency 'bundler'
-  s.add_development_dependency 'bueller', '>= 0.1.0'
+  s.add_development_dependency 'bueller', '0.0.9'
   s.add_development_dependency 'rake'
   s.add_development_dependency 'simplecov'
 end
