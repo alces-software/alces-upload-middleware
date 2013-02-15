@@ -25,7 +25,7 @@ Gem::Specification.new do |s|
   s.name = 'alces-upload-middleware'
   s.version = AlcesUploadMiddleware::VERSION
   s.platform = Gem::Platform::RUBY
-  s.date = "2013-01-14"
+  s.date = "2013-02-15"
   s.authors = ['Mark J. Titorenko']
   s.email = 'mark.titorenko@alces-software.com'
   s.homepage = 'http://github.com/alces-software/alces-upload-middleware'
